@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 session_start();
@@ -10,11 +11,26 @@ function normalizar(string $texto): string
 {
     $texto = mb_strtolower(trim($texto), 'UTF-8');
     $mapa = [
-        'á' => 'a', 'à' => 'a', 'ä' => 'a', 'â' => 'a',
-        'é' => 'e', 'è' => 'e', 'ë' => 'e', 'ê' => 'e',
-        'í' => 'i', 'ì' => 'i', 'ï' => 'i', 'î' => 'i',
-        'ó' => 'o', 'ò' => 'o', 'ö' => 'o', 'ô' => 'o',
-        'ú' => 'u', 'ù' => 'u', 'ü' => 'u', 'û' => 'u',
+        'á' => 'a',
+        'à' => 'a',
+        'ä' => 'a',
+        'â' => 'a',
+        'é' => 'e',
+        'è' => 'e',
+        'ë' => 'e',
+        'ê' => 'e',
+        'í' => 'i',
+        'ì' => 'i',
+        'ï' => 'i',
+        'î' => 'i',
+        'ó' => 'o',
+        'ò' => 'o',
+        'ö' => 'o',
+        'ô' => 'o',
+        'ú' => 'u',
+        'ù' => 'u',
+        'ü' => 'u',
+        'û' => 'u',
     ];
 
     return strtr($texto, $mapa);
@@ -209,7 +225,8 @@ if ($estado['perdido']) {
 $estado = estadoPartida();
 $progreso = progreso($estado);
 $oculta = palabraOculta($estado['palabra'], $estado['aciertos']);
-$teclado = str_split('abcdefghijklmnñopqrstuvwxyz');
+$teclado = preg_split('//u', 'abcdefghijklmnñopqrstuvwxyz', -1, PREG_SPLIT_NO_EMPTY);
+$fallosActuales = count($estado['fallos']);
 
 header('X-Frame-Options: DENY');
 header('X-Content-Type-Options: nosniff');
@@ -221,22 +238,30 @@ header("Content-Security-Policy: default-src 'self'; script-src 'self'; style-sr
 ?>
 <!doctype html>
 <html lang="es">
+
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Ahorcado PHP</title>
     <style>
         :root {
-            --bg: radial-gradient(circle at 20% 10%, #f3b6ff 0%, transparent 30%), radial-gradient(circle at 80% 20%, #7dd3fc 0%, transparent 25%), linear-gradient(140deg, #111827, #0b1020 70%);
-            --panel: rgba(17, 24, 39, 0.88);
-            --text: #f9fafb;
-            --muted: #cbd5e1;
+            --brand: #29a0e4;
+            --brand-deep: #1c7eb8;
+            --bg: radial-gradient(circle at 12% 15%, #c9ecff 0%, transparent 35%), radial-gradient(circle at 86% 8%, #9ad8ff 0%, transparent 28%), linear-gradient(160deg, #eaf7ff 0%, #d5efff 45%, #edf9ff 100%);
+            --panel: rgba(255, 255, 255, 0.86);
+            --text: #0e3550;
+            --muted: #3e6a86;
             --ok: #22c55e;
             --bad: #ef4444;
-            --accent: #f59e0b;
-            --line: rgba(255, 255, 255, 0.14);
+            --accent: #29a0e4;
+            --line: rgba(41, 160, 228, 0.28);
+            --surface: #ffffff;
         }
-        * { box-sizing: border-box; }
+
+        * {
+            box-sizing: border-box;
+        }
+
         body {
             margin: 0;
             min-height: 100vh;
@@ -247,49 +272,220 @@ header("Content-Security-Policy: default-src 'self'; script-src 'self'; style-sr
             place-items: center;
             padding: 1rem;
         }
+
         .panel {
             width: min(920px, 100%);
             background: var(--panel);
             border: 1px solid var(--line);
             border-radius: 20px;
-            padding: 1.2rem;
+            padding: 1.3rem;
             backdrop-filter: blur(6px);
+            box-shadow: 0 16px 40px rgba(12, 74, 110, 0.14);
         }
-        h1 { margin: 0 0 .3rem; font-size: clamp(1.2rem, 2.3vw, 2rem); }
-        .sub { margin: 0 0 1rem; color: var(--muted); }
-        .pill-wrap { display: flex; gap: .6rem; flex-wrap: wrap; margin-bottom: 1rem; }
-        .pill { border: 1px solid var(--line); padding: .35rem .6rem; border-radius: 999px; }
-        .pill.ok { border-color: var(--ok); color: var(--ok); }
-        .pill.bad { border-color: var(--bad); color: var(--bad); }
-        .word { font-size: clamp(1.1rem, 2.1vw, 1.9rem); letter-spacing: .2rem; margin: 1rem 0; }
-        form.main { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; }
+
+        h1 {
+            margin: 0 0 .3rem;
+            font-size: clamp(1.2rem, 2.3vw, 2rem);
+        }
+
+        .sub {
+            margin: 0 0 1rem;
+            color: var(--muted);
+        }
+
+        .pill-wrap {
+            display: flex;
+            gap: .6rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+
+        .pill {
+            border: 1px solid var(--line);
+            background: rgba(41, 160, 228, 0.08);
+            padding: .35rem .6rem;
+            border-radius: 999px;
+        }
+
+        .pill.ok {
+            border-color: var(--ok);
+            color: var(--ok);
+        }
+
+        .pill.bad {
+            border-color: var(--bad);
+            color: var(--bad);
+        }
+
+        .hangman {
+            margin: .9rem 0 1.1rem;
+            height: 210px;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            background: linear-gradient(180deg, rgba(41, 160, 228, 0.11), rgba(255, 255, 255, 0.6));
+            position: relative;
+            overflow: hidden;
+        }
+
+        .piece {
+            position: absolute;
+            background: #0f5f8b;
+            border-radius: 6px;
+        }
+
+        .base {
+            width: 120px;
+            height: 8px;
+            left: 96px;
+            bottom: 14px;
+        }
+
+        .pole {
+            width: 8px;
+            height: 160px;
+            left: 132px;
+            bottom: 20px;
+        }
+
+        .beam {
+            width: 80px;
+            height: 8px;
+            left: 132px;
+            top: 30px;
+        }
+
+        .rope {
+            width: 4px;
+            height: 20px;
+            left: 208px;
+            top: 36px;
+        }
+
+        .head {
+            width: 32px;
+            height: 32px;
+            left: 194px;
+            top: 54px;
+            border-radius: 50%;
+            border: 4px solid #0f5f8b;
+            background: transparent;
+        }
+
+        .body {
+            width: 6px;
+            height: 44px;
+            left: 208px;
+            top: 86px;
+        }
+
+        .arm-left {
+            width: 34px;
+            height: 6px;
+            left: 178px;
+            top: 98px;
+            transform: rotate(-30deg);
+            transform-origin: right center;
+        }
+
+        .arm-right {
+            width: 34px;
+            height: 6px;
+            left: 210px;
+            top: 98px;
+            transform: rotate(30deg);
+            transform-origin: left center;
+        }
+
+        .leg-left {
+            width: 34px;
+            height: 6px;
+            left: 178px;
+            top: 136px;
+            transform: rotate(32deg);
+            transform-origin: right center;
+        }
+
+        .leg-right {
+            width: 34px;
+            height: 6px;
+            left: 210px;
+            top: 136px;
+            transform: rotate(-32deg);
+            transform-origin: left center;
+        }
+
+        .word {
+            font-size: clamp(1.1rem, 2.1vw, 1.9rem);
+            letter-spacing: .2rem;
+            margin: 1rem 0;
+        }
+
+        form.main {
+            display: flex;
+            gap: .6rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
         input[type="text"] {
             width: 78px;
             border-radius: 12px;
             border: 1px solid var(--line);
-            background: #0f172a;
+            background: var(--surface);
             color: var(--text);
             padding: .5rem;
             font-size: 1.2rem;
             text-align: center;
         }
+
         button {
             border: 1px solid var(--line);
             border-radius: 12px;
-            background: #111827;
+            background: var(--surface);
             color: var(--text);
             padding: .55rem .8rem;
             cursor: pointer;
         }
-        button:hover { border-color: var(--accent); }
-        .kbd { margin-top: 1rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(38px, 1fr)); gap: .35rem; }
-        .kbd button { padding: .45rem 0; }
-        .hit { border-color: var(--ok) !important; color: var(--ok) !important; }
-        .miss { border-color: var(--bad) !important; color: var(--bad) !important; }
-        .msg { margin-top: .8rem; color: var(--muted); min-height: 1.2rem; }
-        .fails { margin-top: .5rem; color: #fecaca; }
+
+        button:hover {
+            border-color: var(--accent);
+            color: var(--brand-deep);
+        }
+
+        .kbd {
+            margin-top: 1rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(38px, 1fr));
+            gap: .35rem;
+        }
+
+        .kbd button {
+            padding: .45rem 0;
+        }
+
+        .hit {
+            border-color: var(--ok) !important;
+            color: var(--ok) !important;
+        }
+
+        .miss {
+            border-color: var(--bad) !important;
+            color: var(--bad) !important;
+        }
+
+        .msg {
+            margin-top: .8rem;
+            color: var(--muted);
+            min-height: 1.2rem;
+        }
+
+        .fails {
+            margin-top: .5rem;
+            color: #fecaca;
+        }
     </style>
 </head>
+
 <body>
     <main class="panel">
         <h1>Ahorcado PHP con diccionario completo</h1>
@@ -302,6 +498,19 @@ header("Content-Security-Policy: default-src 'self'; script-src 'self'; style-sr
             <div class="pill">Fallos: <?= count($estado['fallos']) ?>/<?= MAX_FALLOS ?></div>
             <div class="pill">Progreso: <?= $progreso ?>%</div>
         </div>
+
+        <section class="hangman" aria-label="dibujo del ahorcado">
+            <div class="piece base"></div>
+            <div class="piece pole"></div>
+            <div class="piece beam"></div>
+            <?php if ($fallosActuales >= 1): ?><div class="piece rope"></div><?php endif; ?>
+            <?php if ($fallosActuales >= 2): ?><div class="piece head"></div><?php endif; ?>
+            <?php if ($fallosActuales >= 3): ?><div class="piece body"></div><?php endif; ?>
+            <?php if ($fallosActuales >= 4): ?><div class="piece arm-left"></div><?php endif; ?>
+            <?php if ($fallosActuales >= 5): ?><div class="piece arm-right"></div><?php endif; ?>
+            <?php if ($fallosActuales >= 6): ?><div class="piece leg-left"></div><?php endif; ?>
+            <?php if ($fallosActuales >= 7): ?><div class="piece leg-right"></div><?php endif; ?>
+        </section>
 
         <div class="word" aria-label="palabra oculta"><?= htmlspecialchars($oculta, ENT_QUOTES, 'UTF-8') ?></div>
 
@@ -322,9 +531,13 @@ header("Content-Security-Policy: default-src 'self'; script-src 'self'; style-sr
         <section class="kbd" aria-label="teclado en pantalla">
             <?php foreach ($teclado as $l): ?>
                 <?php
-                    $class = '';
-                    if (in_array($l, $estado['aciertos'], true)) { $class = 'hit'; }
-                    if (in_array($l, $estado['fallos'], true)) { $class = 'miss'; }
+                $class = '';
+                if (in_array($l, $estado['aciertos'], true)) {
+                    $class = 'hit';
+                }
+                if (in_array($l, $estado['fallos'], true)) {
+                    $class = 'miss';
+                }
                 ?>
                 <form method="post" action="/" style="display:contents;">
                     <input type="hidden" name="csrf" value="<?= htmlspecialchars($estado['csrf'], ENT_QUOTES, 'UTF-8') ?>">
@@ -341,4 +554,5 @@ header("Content-Security-Policy: default-src 'self'; script-src 'self'; style-sr
         <?php endif; ?>
     </main>
 </body>
+
 </html>
