@@ -1,0 +1,61 @@
+<main class="escena">
+    <section class="panel">
+        <header class="encabezado">
+            <p class="etiqueta">Ahorcado Angular</p>
+            <h1>Diccionario completo en espanol</h1>
+            <p class="subtitulo">
+                Partida basada en an-array-of-spanish-words (~636k palabras). Acentos y tildes se validan de forma
+                inteligente.
+            </p>
+        </header>
+
+        <div class="estado-fila">
+            <div class="estado-pill" [class.ok]="juegoGanado" [class.bad]="juegoPerdido">
+                {{ juegoGanado ? 'Ganaste' : juegoPerdido ? 'Perdiste' : 'En juego' }}
+            </div>
+            <div class="estado-pill">Fallos: {{ fallos }}/{{ maxFallos }}</div>
+            <div class="estado-pill">Progreso: {{ progreso }}%</div>
+        </div>
+
+        <section class="ahorcado-box" aria-label="dibujo del ahorcado">
+            <div class="poste"></div>
+            <div class="viga"></div>
+            <div class="base"></div>
+
+            <div class="cuerda" *ngIf="parteVisible(0)"></div>
+            <div class="cabeza" *ngIf="parteVisible(1)"></div>
+            <div class="tronco" *ngIf="parteVisible(2)"></div>
+            <div class="brazo-izquierdo" *ngIf="parteVisible(3)"></div>
+            <div class="brazo-derecho" *ngIf="parteVisible(4)"></div>
+            <div class="pie-izquierdo" *ngIf="parteVisible(5)"></div>
+            <div class="pie-derecho" *ngIf="parteVisible(6)"></div>
+        </section>
+
+        <section class="palabra" aria-label="palabra oculta">
+            <span *ngFor="let letra of palabraOculta">{{ letra }}</span>
+        </section>
+
+        <form class="controles" (ngSubmit)="probarIntento()">
+            <label for="intento">Tu letra</label>
+            <input id="intento" name="intento" [(ngModel)]="intento" maxlength="1" autocomplete="off"
+                [disabled]="juegoTerminado" />
+            <button type="submit" [disabled]="juegoTerminado">Probar</button>
+            <button type="button" class="secundario" (click)="nuevaPartida()">Nueva partida</button>
+        </form>
+
+        <p class="mensaje">{{ mensaje }}</p>
+
+        <section class="teclado" aria-label="teclado en pantalla">
+            <button type="button" *ngFor="let letra of letrasTeclado" (click)="probarDesdeTeclado(letra)"
+                [disabled]="letraUsada(letra) || juegoTerminado"
+                [class.acierto]="letrasAdivinadas.has(letra.toLowerCase())"
+                [class.error]="letrasFalladas.has(letra.toLowerCase())">
+                {{ letra }}
+            </button>
+        </section>
+
+        <p class="falladas" *ngIf="letrasFalladas.size > 0">
+            Falladas: {{ letrasFalladasListado }}
+        </p>
+    </section>
+</main>
