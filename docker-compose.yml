@@ -1,15 +1,15 @@
 services:
-  ahorcado-angular:
+  ahorcado-php:
     build:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "18081:80"
+      - "18082:80"
     read_only: true
     tmpfs:
-      - /var/cache/nginx
-      - /var/run
       - /tmp
+      - /var/run/apache2
+      - /var/lock/apache2
     security_opt:
       - no-new-privileges:true
     restart: unless-stopped

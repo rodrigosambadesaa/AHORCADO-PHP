@@ -1,12 +1,11 @@
-FROM node:20-alpine AS build
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-COPY . .
-RUN npm run build
+FROM php:8.3-apache
 
-FROM nginx:1.27-alpine
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=build /app/dist/angular-ahorcado/browser /usr/share/nginx/html
+RUN a2enmod headers rewrite
+
+COPY docker/000-default.conf /etc/apache2/sites-available/000-default.conf
+COPY . /var/www/html
+
+RUN mkdir -p /var/run/apache2 /var/lock/apache2 /tmp \
+  && chown -R www-data:www-data /var/www/html /var/run/apache2 /var/lock/apache2 /tmp
+
 EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
